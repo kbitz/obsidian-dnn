@@ -2,13 +2,13 @@
 
 ## In Progress
 
-### Review initial local plugin
+### Ship initial local plugin
 
-Draft PR is in `/review-and-prep`. Remembered-note/gap passed. Screen-reader speech (T4.5) was deferred by the user.
+`/review-and-prep` finished on [PR #1](https://github.com/kbitz/obsidian-dnn/pull/1) (open, `kbitz/daily-note-navigation` → `main`): remembered-note/gap passed, screen-reader speech (T4.5) was deferred by the user. Now in `/ship`: CHANGELOG and VERSION are set, code is pushed, and documentation is synced.
 
 ## Current Plan
 
-Finish `/review-and-prep` on the same draft PR, then `/ship`. Do not open another PR.
+Finish `/ship` on PR #1. Do not open another PR.
 
 ## Future
 
