@@ -4,11 +4,11 @@
 
 ### Review initial local plugin
 
-Draft PR is paused in `/review-and-prep`. Remembered-note/gap passed. Screen-reader speech (T4.5) is still unverified.
+Draft PR is in `/review-and-prep`. Remembered-note/gap passed. Screen-reader speech (T4.5) was deferred by the user.
 
 ## Current Plan
 
-Pass or explicitly defer T4.5, then `/review-and-prep resume` on the same draft PR. Do not go directly to `/ship`.
+Finish `/review-and-prep` on the same draft PR, then `/ship`. Do not open another PR.
 
 ## Future
 
