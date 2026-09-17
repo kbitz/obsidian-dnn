@@ -94,6 +94,19 @@ describe('settings and controller', () => {
     expect(document.activeElement).toBe(document.querySelector('.dnn-date'));
     plugin.unload();
   });
+  it('does not steal focus back if the user moved to another pane while navigation was pending', async () => {
+    const { app, leaf, plugin } = fixture();
+    const other = app.workspace.add(new TFile('Journal/2026-09-14.md'));
+    app.workspace.trigger('layout-change'); await tick();
+    const open = deferred();
+    leaf.openFile.mockImplementationOnce(async file => { await open.promise; leaf.view.file = file; leaf.workspace.trigger('file-open', file); });
+    document.querySelector<HTMLButtonElement>('[aria-label="Open previous daily note"]')!.click();
+    const otherDate = other.view.containerEl.querySelector<HTMLButtonElement>('.dnn-date')!;
+    otherDate.focus();
+    open.resolve(); await tick();
+    expect(document.activeElement).toBe(otherDate);
+    plugin.unload();
+  });
   it('navigates across gaps in the clicked pinned pane and preserves the other pane', async () => {
     const { app, leaf, plugin } = fixture();
     leaf.pinned = true;
@@ -246,6 +259,23 @@ describe('settings and controller', () => {
     await tick();
     expect(read).toHaveBeenCalledTimes(1);
     app.vault.trigger('modify'); app.workspace.trigger('layout-change'); await tick();
+    expect(read).toHaveBeenCalledTimes(1);
+    plugin.unload();
+  });
+  it('ignores vault events for files outside the configured folder', async () => {
+    const { app, plugin } = fixture();
+    const folder = app.vault.getAbstractFileByPath('Journal');
+    if (!(folder instanceof TFolder)) throw new Error('Missing fixture folder');
+    const children = folder.children;
+    const read = vi.fn(() => children);
+    Object.defineProperty(folder, 'children', { get: read, configurable: true });
+    // Trigger the event directly (not vault.add()) so the test doesn't itself touch
+    // folder.children and skew the count this assertion is measuring.
+    app.vault.trigger('create', new TFile('Attachments/unrelated.png'));
+    await tick();
+    expect(read).not.toHaveBeenCalled();
+    app.vault.trigger('create', new TFile('Journal/2026-09-20.md'));
+    await tick();
     expect(read).toHaveBeenCalledTimes(1);
     plugin.unload();
   });

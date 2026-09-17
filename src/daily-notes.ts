@@ -11,7 +11,10 @@ export interface DailyIndex {
 export type NavigationIntent = { direction: -1 | 1 } | { date: string };
 
 // Bracketed literals and escaped characters are never interpreted as date tokens.
-const tokens = ['YYYY', 'GGGG', 'MMMM', 'MMM', 'MM', 'Mo', 'M', 'DDDo', 'DDDD', 'DDD', 'DD', 'Do', 'D', 'WW', 'Wo', 'W', 'E', 'dddd', 'ddd', 'dd', 'do', 'd'];
+// Mo/DDDo/Wo are excluded: Moment formats them (e.g. "9th") but its strict parser
+// cannot read that output back, so a format using them would silently recognize
+// zero notes instead of surfacing the "complete date format" error below.
+const tokens = ['YYYY', 'GGGG', 'MMMM', 'MMM', 'MM', 'M', 'DDDD', 'DDD', 'DD', 'Do', 'D', 'WW', 'W', 'E', 'dddd', 'ddd', 'dd', 'do', 'd'];
 
 export function validFormat(format: string, factory: MomentFactory, locale: string): boolean {
   let expanded = format;

@@ -63,9 +63,13 @@ export function openCalendar(options: PickerOptions): Picker {
   }
   function render(moveFocus = false) {
     if (closed) return;
+    // A render can be triggered autonomously (midnight rollover, a failed pending
+    // navigation resolving) while the user is mid-edit in the year field; don't
+    // clobber their typed text or steal focus out from under them.
+    const yearFocused = doc.activeElement === yearInput;
     grid.empty();
     monthInput.value = String(month.month());
-    yearInput.value = String(month.year()).padStart(4, '0');
+    if (!yearFocused) yearInput.value = String(month.year()).padStart(4, '0');
     previous.disabled = month.year() === minYear && month.month() === 0;
     next.disabled = month.year() === maxYear && month.month() === 11;
     const today = dateKey(moment());
@@ -99,7 +103,7 @@ export function openCalendar(options: PickerOptions): Picker {
         });
       }
     }
-    if (moveFocus) focusDay();
+    if (moveFocus && !yearFocused) focusDay();
     position();
   }
   async function activate(key: string) {

@@ -119,6 +119,19 @@ describe('calendar behavior', () => {
     expect(document.querySelector('dialog')?.open).toBe(true);
     hang.resolve();
   });
+  it('does not clobber an in-progress year edit when a pending selection resolves', async () => {
+    const { select } = calendar();
+    const open = deferred();
+    select.mockImplementationOnce(async () => { await open.promise; return false; });
+    const year = document.querySelector<HTMLInputElement>('[aria-label="Year"]')!;
+    day('2026-09-14').click();
+    year.focus();
+    year.value = '2020';
+    open.resolve();
+    await vi.waitFor(() => expect(day('2026-09-14').getAttribute('aria-disabled')).toBe('false'));
+    expect(year.value).toBe('2020');
+    expect(document.activeElement).toBe(year);
+  });
   it('validates a year without interpreting input arrows as grid keys', () => {
     calendar();
     const year = document.querySelector<HTMLInputElement>('[aria-label="Year"]')!;

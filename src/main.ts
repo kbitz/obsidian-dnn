@@ -67,7 +67,18 @@ export default class DailyNoteNavigation extends Plugin {
       if (this.disposed) return;
       this.ready = true;
       // startup -> snapshot/index -> per-pane bindings; file events only dirty the index.
-      const changed = () => { this.dirty = true; this.schedule(); };
+      // Vault-wide events fire for every file in the vault, not just daily notes; an
+      // unrelated attachment created elsewhere shouldn't force a rebuild (and, worse,
+      // close an open picker — an open picker only owns dates from the configured folder).
+      const inScope = (path: string) => {
+        const folder = this.snapshot?.settings.folder;
+        return !folder || path === folder || path.startsWith(`${folder}/`);
+      };
+      const changed = (file?: { path: string }, oldPath?: string) => {
+        if (file && !inScope(file.path) && !(oldPath !== undefined && inScope(oldPath))) return;
+        this.dirty = true;
+        this.schedule();
+      };
       this.registerEvent(this.app.vault.on('create', changed));
       this.registerEvent(this.app.vault.on('delete', changed));
       this.registerEvent(this.app.vault.on('rename', changed));
@@ -233,12 +244,12 @@ export default class DailyNoteNavigation extends Plugin {
     if (path === pane.path) return true;
     this.inflight.add(pane.leaf);
     pane.pending = true;
-    // currentDate can be missing if pane.path just fell out of the index (e.g. became
-    // ambiguous) between the guards above and here; skip the interim update rather than
-    // rendering an undefined date, reconcile() below repairs the header once settled.
-    if (currentDate) pane.header.update(this.state(pane, currentDate, snapshot));
     let opened = false;
     try {
+      // currentDate can be missing if pane.path just fell out of the index (e.g. became
+      // ambiguous) between the guards above and here; skip the interim update rather than
+      // rendering an undefined date, reconcile() below repairs the header once settled.
+      if (currentDate) pane.header.update(this.state(pane, currentDate, snapshot));
       await pane.leaf.openFile(target);
       opened = pane.leaf.view instanceof MarkdownView && pane.leaf.view.file?.path === path;
       return opened;
@@ -250,8 +261,14 @@ export default class DailyNoteNavigation extends Plugin {
       this.inflight.delete(pane.leaf);
       const current = this.panes.get(pane.leaf);
       if (current) current.pending = false;
+      // Capture before reconcile() disposes this header: only reclaim focus if the
+      // user was still parked on this pane's own controls (or nothing has explicit
+      // focus, as after a native click) when the open resolved — not if they've
+      // since moved focus to another pane's editor.
+      const activeBeforeReconcile = pane.header.root.ownerDocument.activeElement;
+      const hadFocus = pane.header.root.contains(activeBeforeReconcile) || activeBeforeReconcile === pane.header.root.ownerDocument.body;
       this.reconcile();
-      if (opened) {
+      if (opened && hadFocus) {
         const updated = this.panes.get(pane.leaf);
         if (fromPicker) updated?.header.dateButton.focus();
         else if (updated && 'direction' in intent) {

@@ -42,6 +42,7 @@ describe('full-path daily note recognition', () => {
   ])('round-trips %s', (format, path, expected) => expect(recognizer({ ...settings, format }, moment)(`Journal/${path}.md`)).toBe(expected));
 
   it.each(['MM-DD', 'YY-MM-DD', 'YYYY-MM', 'YYYY', 'YYYY-MM-DD HH:mm', 'X', 'GGGG-WW', '[YYYY]-MM-DD', 'LTS', 'LLL', 'YYYY-MM-DD[', 'YYYY-MM-DD\\'])('rejects incomplete/time format %s', format => expect(validFormat(format, moment, 'en')).toBe(false));
+  it.each(['YYYY-Mo-DD', 'YYYY-DDDo', 'GGGG-[W]Wo-E'])('rejects %s: Moment formats its ordinal suffix but cannot strictly parse it back', format => expect(validFormat(format, moment, 'en')).toBe(false));
   it('throws instead of inferring the current year from an incomplete format', () => {
     expect(() => recognizer({ folder: 'Journal', format: 'MM-DD', locale: 'en' }, moment)).toThrow(/complete date format/);
   });

@@ -51,10 +51,15 @@ const result = cli('eval', `code=(${async function (application) {
     header.style.display = 'none';
     try { expect(!application.commands.commands['daily-note-navigation:open-date-picker'].checkCallback(true), 'hidden header makes picker command unavailable'); }
     finally { header.style.removeProperty('display'); }
-    const added = await application.vault.create('Journal/2026-09-17.md', '# Temporary target'); await pause();
+    // Avoid colliding with fixture.mjs's dynamically-created Today note: pick whichever
+    // of these two unused September 2026 dates isn't today when this actually runs.
+    const now = new Date();
+    const todayKey = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+    const scratchKey = todayKey === '2026-09-17' ? '2026-09-19' : '2026-09-17';
+    const added = await application.vault.create(`Journal/${scratchKey}.md`, '# Temporary target'); await pause();
     try {
       date().click();
-      const staleButton = document.querySelector('[data-date="2026-09-17"]');
+      const staleButton = document.querySelector(`[data-date="${scratchKey}"]`);
       await application.vault.delete(added); await pause();
       staleButton.click(); await pause();
       expect(!document.querySelector('.dnn-calendar') && leaf.view.file.path === 'Journal/2026-09-16.md', 'deleted target cannot navigate through stale picker');
