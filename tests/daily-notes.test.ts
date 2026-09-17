@@ -2,10 +2,19 @@ import { afterEach, describe, expect, it } from 'vitest';
 import moment from 'moment';
 import 'moment/locale/fr';
 import 'moment/locale/ar';
-import { buildIndex, dateKey, dateMoment, monthCells, neighbor, recognizer, validFormat } from '../src/daily-notes';
+import { buildIndex, dateKey, dateMoment, monthCells, neighbor, recognizer, settingsKey, validFormat } from '../src/daily-notes';
 
 const settings = { folder: 'Journal', format: 'YYYY-MM-DD', locale: 'en' };
 afterEach(() => moment.locale('en'));
+
+describe('settings cache key', () => {
+  it('is equal for equal settings and distinct when any field differs', () => {
+    expect(settingsKey(settings)).toBe(settingsKey({ ...settings }));
+    expect(settingsKey(settings)).not.toBe(settingsKey({ ...settings, folder: 'Other' }));
+    expect(settingsKey(settings)).not.toBe(settingsKey({ ...settings, format: 'YYYY/MM/DD' }));
+    expect(settingsKey(settings)).not.toBe(settingsKey({ ...settings, locale: 'fr' }));
+  });
+});
 
 describe('full-path daily note recognition', () => {
   it.each([
@@ -63,6 +72,12 @@ describe('chronological index and calendar model', () => {
     const single = buildIndex(['Journal/2026-09-16.md'], recognizer(settings, moment));
     expect(neighbor(single, '2026-09-16', -1)).toBeUndefined();
     expect(neighbor(single, '2026-09-16', 1)).toBeUndefined();
+  });
+  it('deduplicates a repeated path instead of treating it as a collision', () => {
+    const index = buildIndex(['Journal/2026-09-16.md', 'Journal/2026-09-16.md'], recognizer(settings, moment));
+    expect(index.dates).toEqual(['2026-09-16']);
+    expect(index.byPath.size).toBe(1);
+    expect(index.ambiguous.size).toBe(0);
   });
   it('fails closed on ambiguous keys and ignores repeated identical paths', () => {
     const index = buildIndex(['a', 'a', 'b'], () => '2026-09-16');

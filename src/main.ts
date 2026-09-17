@@ -138,7 +138,6 @@ export default class DailyNoteNavigation extends Plugin {
         // An open picker owns a snapshot. Close it rather than leaving stale selectable dates.
         for (const pane of this.panes.values()) pane.picker?.close(false);
         this.snapshot = { settings, key, index };
-        if (this.dirty) this.schedule();
         if (index.ambiguous.size) this.problem('Some daily note dates are ambiguous and cannot be browsed.');
         else this.lastProblem = '';
       }
@@ -151,8 +150,7 @@ export default class DailyNoteNavigation extends Plugin {
     }
   }
 
-  private state(pane: Pick<Pane, 'path' | 'pending'>, snapshot: Snapshot): HeaderState {
-    const date = snapshot.index.byPath.get(pane.path)!;
+  private state(pane: Pick<Pane, 'pending'>, date: string, snapshot: Snapshot): HeaderState {
     return { date, previous: neighbor(snapshot.index, date, -1), next: neighbor(snapshot.index, date, 1), pending: pane.pending };
   }
 
@@ -166,7 +164,8 @@ export default class DailyNoteNavigation extends Plugin {
     for (const leaf of leaves) {
       if (leaf.isDeferred || !(leaf.view instanceof MarkdownView) || !leaf.view.file || !snapshot.index.byPath.has(leaf.view.file.path)) continue;
       const existing = this.panes.get(leaf);
-      if (existing) { existing.header.update(this.state(existing, snapshot)); continue; }
+      // The disposal loop above already removed any pane whose path fell out of the index.
+      if (existing) { existing.header.update(this.state(existing, snapshot.index.byPath.get(existing.path)!, snapshot)); continue; }
       const view = leaf.view;
       const path = view.file!.path;
       const pending = this.inflight.has(leaf);
@@ -175,7 +174,7 @@ export default class DailyNoteNavigation extends Plugin {
         next: () => { const pane = this.panes.get(leaf); if (pane) void this.navigate(pane, { direction: 1 }); },
         picker: () => { const pane = this.panes.get(leaf); if (pane) this.showPicker(pane); },
       };
-      const header = mountHeader(view.containerEl, this.state({ path, pending }, snapshot), actions, () => this.schedule(view.containerEl.win));
+      const header = mountHeader(view.containerEl, this.state({ pending }, snapshot.index.byPath.get(path)!, snapshot), actions, () => this.schedule(view.containerEl.win));
       if (header) this.panes.set(leaf, { leaf, view, path, header, key: snapshot.key, pending });
     }
   }
@@ -209,7 +208,10 @@ export default class DailyNoteNavigation extends Plugin {
         select: key => this.navigate(pane, { date: key }, true),
         closed: () => { pane.picker = undefined; },
       });
-    } catch { this.problem('The daily note date picker could not open in this window.'); }
+    } catch (error) {
+      console.error('Daily Note Navigation: failed to open the date picker', error);
+      this.problem('The daily note date picker could not open in this window.');
+    }
   }
 
   private async navigate(pane: Pane, intent: NavigationIntent, fromPicker = false): Promise<boolean> {
@@ -231,13 +233,17 @@ export default class DailyNoteNavigation extends Plugin {
     if (path === pane.path) return true;
     this.inflight.add(pane.leaf);
     pane.pending = true;
-    pane.header.update(this.state(pane, snapshot));
+    // currentDate can be missing if pane.path just fell out of the index (e.g. became
+    // ambiguous) between the guards above and here; skip the interim update rather than
+    // rendering an undefined date, reconcile() below repairs the header once settled.
+    if (currentDate) pane.header.update(this.state(pane, currentDate, snapshot));
     let opened = false;
     try {
       await pane.leaf.openFile(target);
       opened = pane.leaf.view instanceof MarkdownView && pane.leaf.view.file?.path === path;
       return opened;
-    } catch {
+    } catch (error) {
+      console.error('Daily Note Navigation: failed to open', path, error);
       this.problem('Could not open the daily note. Please try again.');
       return false;
     } finally {
@@ -245,7 +251,14 @@ export default class DailyNoteNavigation extends Plugin {
       const current = this.panes.get(pane.leaf);
       if (current) current.pending = false;
       this.reconcile();
-      if (fromPicker && opened) this.panes.get(pane.leaf)?.header.dateButton.focus();
+      if (opened) {
+        const updated = this.panes.get(pane.leaf);
+        if (fromPicker) updated?.header.dateButton.focus();
+        else if (updated && 'direction' in intent) {
+          const arrow = intent.direction < 0 ? updated.header.previousButton : updated.header.nextButton;
+          (arrow.disabled ? updated.header.dateButton : arrow).focus();
+        }
+      }
     }
   }
 }

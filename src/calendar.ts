@@ -1,3 +1,4 @@
+import { setIcon } from 'obsidian';
 import { dateKey, dateMoment, monthCells, type DailyIndex, type MomentFactory } from './daily-notes';
 
 export interface Picker { close: (restoreFocus?: boolean) => void; focus: () => void }
@@ -19,11 +20,13 @@ export function openCalendar(options: PickerOptions): Picker {
   openPickers.get(doc)?.close(false);
   const dialog = doc.body.createEl('dialog', { cls: 'dnn-calendar', attr: { 'aria-label': 'Choose an existing daily note' } });
   const controls = dialog.createDiv({ cls: 'dnn-month-controls' });
-  const previous = controls.createEl('button', { text: '‹', attr: { type: 'button', 'aria-label': 'Previous month' } });
+  const previous = controls.createEl('button', { attr: { type: 'button', 'aria-label': 'Previous month' } });
+  setIcon(previous, 'chevron-left');
   const monthInput = controls.createEl('select', { attr: { 'aria-label': 'Month' } });
   for (let i = 0; i < 12; i++) monthInput.createEl('option', { value: String(i), text: dateMoment('2000-01-01', moment, locale).month(i).format('MMMM') });
   const yearInput = controls.createEl('input', { cls: 'dnn-year', attr: { type: 'text', inputmode: 'numeric', 'aria-label': 'Year', maxlength: '4' } });
-  const next = controls.createEl('button', { text: '›', attr: { type: 'button', 'aria-label': 'Next month' } });
+  const next = controls.createEl('button', { attr: { type: 'button', 'aria-label': 'Next month' } });
+  setIcon(next, 'chevron-right');
   const announcement = dialog.createDiv({ cls: 'dnn-sr-only', attr: { 'aria-live': 'polite', 'aria-atomic': 'true' } });
   const message = dialog.createDiv({ cls: 'dnn-message', attr: { role: 'status' } });
   const grid = dialog.createDiv({ attr: { role: 'grid', 'aria-label': 'Daily notes' } });
@@ -38,6 +41,7 @@ export function openCalendar(options: PickerOptions): Picker {
   let pending = false;
   let outsideDown = false;
   let midnightTimer: number | undefined;
+  let positionFrame: number | undefined;
 
   function focusDay() {
     grid.querySelector<HTMLButtonElement>(`[data-date="${focusKey}"]`)?.focus();
@@ -51,6 +55,11 @@ export function openCalendar(options: PickerOptions): Picker {
     const top = Math.max(8, Math.min(below + bounds.height > win.innerHeight - 8 ? rect.top - bounds.height - 6 : below, win.innerHeight - bounds.height - 8));
     dialog.style.setProperty('--dnn-left', `${left}px`);
     dialog.style.setProperty('--dnn-top', `${top}px`);
+  }
+  // Scroll/resize can fire many times per second; coalesce to one reposition per frame.
+  function schedulePosition() {
+    if (closed || positionFrame !== undefined) return;
+    positionFrame = win.requestAnimationFrame(() => { positionFrame = undefined; position(); });
   }
   function render(moveFocus = false) {
     if (closed) return;
@@ -120,7 +129,12 @@ export function openCalendar(options: PickerOptions): Picker {
       return;
     }
     yearInput.removeAttribute('aria-invalid');
-    if (year === month.year()) return;
+    if (year === month.year()) {
+      // No-op commit: resync the message (it may still show the just-cleared error)
+      // without rebuilding the grid — callers rely on day buttons keeping identity here.
+      message.textContent = monthCells(dateKey(month), index, moment, locale).some(cell => cell.inMonth && cell.exists) ? '' : 'No daily notes this month.';
+      return;
+    }
     month.year(year);
     focusKey = dateKey(month);
     render();
@@ -157,8 +171,9 @@ export function openCalendar(options: PickerOptions): Picker {
       if (closed) return;
       closed = true;
       if (midnightTimer !== undefined) win.clearTimeout(midnightTimer);
-      win.removeEventListener('resize', position);
-      doc.removeEventListener('scroll', position, true);
+      if (positionFrame !== undefined) win.cancelAnimationFrame(positionFrame);
+      win.removeEventListener('resize', schedulePosition);
+      doc.removeEventListener('scroll', schedulePosition, true);
       if (dialog.open) dialog.close();
       dialog.remove();
       anchor.setAttribute('aria-expanded', 'false');
@@ -179,8 +194,8 @@ export function openCalendar(options: PickerOptions): Picker {
   dialog.addEventListener('close', () => picker.close());
   dialog.addEventListener('pointerdown', event => { outsideDown = isOutside(event); });
   dialog.addEventListener('pointerup', event => { if (outsideDown && isOutside(event)) picker.close(); outsideDown = false; });
-  win.addEventListener('resize', position);
-  doc.addEventListener('scroll', position, true);
+  win.addEventListener('resize', schedulePosition);
+  doc.addEventListener('scroll', schedulePosition, true);
   openPickers.set(doc, picker);
   anchor.setAttribute('aria-expanded', 'true');
   const updateToday = () => {

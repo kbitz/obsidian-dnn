@@ -5,6 +5,8 @@ export interface HeaderActions { previous: () => void; next: () => void; picker:
 export interface HeaderBinding {
   root: HTMLElement;
   dateButton: HTMLButtonElement;
+  previousButton: HTMLButtonElement;
+  nextButton: HTMLButtonElement;
   valid: () => boolean;
   update: (state: HeaderState) => void;
   dispose: () => void;
@@ -52,7 +54,7 @@ export function mountHeader(container: HTMLElement, state: HeaderState, actions:
   if (root.isConnected) title.classList.add('dnn-mounted');
   update(state);
   return {
-    root, dateButton, valid, update,
+    root, dateButton, previousButton: previous, nextButton: next, valid, update,
     dispose: () => {
       if (disposed) return;
       disposed = true;

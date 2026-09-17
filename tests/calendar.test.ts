@@ -64,6 +64,24 @@ describe('calendar behavior', () => {
     key('PageUp'); expect(document.activeElement).toBe(day('2026-08-12'));
     key('PageUp', true); expect(document.activeElement).toBe(day('2025-08-12'));
   });
+  it('moves between months using the header control buttons', () => {
+    calendar();
+    const previous = document.querySelector<HTMLButtonElement>('[aria-label="Previous month"]')!;
+    const next = document.querySelector<HTMLButtonElement>('[aria-label="Next month"]')!;
+    previous.click();
+    expect(document.querySelector('[role="grid"]')?.getAttribute('aria-label')).toContain('August 2026');
+    expect(document.querySelector<HTMLSelectElement>('[aria-label="Month"]')?.value).toBe('7');
+    next.click(); next.click();
+    expect(document.querySelector('[role="grid"]')?.getAttribute('aria-label')).toContain('October 2026');
+  });
+  it('changes month from the month dropdown', () => {
+    calendar();
+    const select = document.querySelector<HTMLSelectElement>('[aria-label="Month"]')!;
+    select.value = '0';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(document.querySelector('[role="grid"]')?.getAttribute('aria-label')).toContain('January 2026');
+    expect(document.querySelector<HTMLInputElement>('[aria-label="Year"]')?.value).toBe('2026');
+  });
   it('clamps leap day when moving a year', () => {
     calendar(undefined, '2024-02-29'); key('PageUp', true);
     expect(document.activeElement).toBe(day('2023-02-28'));
@@ -117,6 +135,17 @@ describe('calendar behavior', () => {
     expect(document.querySelector<HTMLButtonElement>('[aria-label="Previous month"]')?.disabled).toBe(true);
     key('PageUp'); expect(document.activeElement).toBe(day('2026-01-01'));
   });
+  it('falls back to the current year when the index has no daily notes', () => {
+    calendar([], '2026-09-16');
+    expect(document.querySelectorAll('.dnn-day[aria-disabled="true"]')).toHaveLength(42);
+    expect(document.querySelector('.dnn-message')?.textContent).toBe('No daily notes this month.');
+    expect(document.querySelector<HTMLButtonElement>('.dnn-calendar-footer button')?.disabled).toBe(true);
+    const year = document.querySelector<HTMLInputElement>('[aria-label="Year"]')!;
+    year.focus(); year.value = '2025';
+    year.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    expect(year.getAttribute('aria-invalid')).toBe('true');
+    expect(document.querySelector('.dnn-message')?.textContent).toBe('Enter a year from 2026 to 2026.');
+  });
   it('disables missing Today and cannot activate it', () => {
     vi.setSystemTime(new Date('2026-09-17T12:00:00'));
     const { select } = calendar();
@@ -130,6 +159,28 @@ describe('calendar behavior', () => {
     expect(closed).toHaveBeenCalledOnce();
     expect(document.activeElement).toBe(anchor);
     expect(anchor.getAttribute('aria-expanded')).toBe('false');
+  });
+  it('closes when a pointer press and release both land outside the dialog', () => {
+    const { closed } = calendar();
+    const dialog = document.querySelector('dialog')!;
+    dialog.dispatchEvent(new PointerEvent('pointerdown', { clientX: 500, clientY: 500, bubbles: true, cancelable: true }));
+    dialog.dispatchEvent(new PointerEvent('pointerup', { clientX: 500, clientY: 500, bubbles: true, cancelable: true }));
+    expect(document.querySelector('dialog')).toBeNull();
+    expect(closed).toHaveBeenCalledOnce();
+  });
+  it('does not close on a drag that presses outside but releases inside the dialog', () => {
+    calendar();
+    const dialog = document.querySelector('dialog')!;
+    dialog.dispatchEvent(new PointerEvent('pointerdown', { clientX: 500, clientY: 500, bubbles: true, cancelable: true }));
+    dialog.dispatchEvent(new PointerEvent('pointerup', { clientX: 0, clientY: 0, bubbles: true, cancelable: true }));
+    expect(document.querySelector('dialog')).not.toBeNull();
+  });
+  it('does not close when a press starts inside the dialog but releases outside', () => {
+    calendar();
+    const dialog = document.querySelector('dialog')!;
+    dialog.dispatchEvent(new PointerEvent('pointerdown', { clientX: 0, clientY: 0, bubbles: true, cancelable: true }));
+    dialog.dispatchEvent(new PointerEvent('pointerup', { clientX: 500, clientY: 500, bubbles: true, cancelable: true }));
+    expect(document.querySelector('dialog')).not.toBeNull();
   });
   it('allows only one picker per document and cleans up window listeners', () => {
     const remove = vi.spyOn(window, 'removeEventListener');

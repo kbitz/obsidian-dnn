@@ -39,6 +39,28 @@ describe('header ownership', () => {
     expect(changed).toHaveBeenCalled();
     binding.dispose();
   });
+  it('refuses a second mount over the same title and leaves the first intact', () => {
+    const view = new MarkdownView(new TFile('Journal/2026-09-16.md'));
+    const actions = { previous: vi.fn(), next: vi.fn(), picker: vi.fn() };
+    const first = mountHeader(view.containerEl, { date: '2026-09-16', pending: false }, actions, vi.fn())!;
+    const second = mountHeader(view.containerEl, { date: '2026-09-16', pending: false }, actions, vi.fn());
+    expect(second).toBeNull();
+    expect(view.containerEl.querySelectorAll('.dnn-nav')).toHaveLength(1);
+    first.dispose();
+  });
+  it('fails closed when the window has no MutationObserver', () => {
+    const view = new MarkdownView(new TFile('Journal/2026-09-16.md'));
+    const win = view.containerEl.ownerDocument.defaultView as unknown as { MutationObserver?: typeof MutationObserver };
+    const original = win.MutationObserver;
+    win.MutationObserver = undefined;
+    try {
+      const binding = mountHeader(view.containerEl, { date: '2026-09-16', pending: false }, { previous: vi.fn(), next: vi.fn(), picker: vi.fn() }, vi.fn());
+      expect(binding).toBeNull();
+      expect(view.containerEl.querySelector('.dnn-nav')).toBeNull();
+    } finally {
+      win.MutationObserver = original;
+    }
+  });
 });
 
 describe('settings and controller', () => {
@@ -54,6 +76,22 @@ describe('settings and controller', () => {
     expect(readDailySettings(app as unknown as ObsidianApp, moment).folder).toBe('Journal');
     app.internalPlugins.plugins['daily-notes'].enabled = false;
     expect(() => readDailySettings(app as unknown as ObsidianApp, moment)).toThrow('Enable');
+    plugin.unload();
+  });
+  it('restores keyboard focus to the corresponding arrow after navigation replaces the header', async () => {
+    const { plugin } = fixture();
+    document.querySelector<HTMLButtonElement>('[aria-label="Open previous daily note"]')!.click();
+    await dateIs('2026-09-14');
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Open previous daily note');
+    expect(document.activeElement).toBe(document.querySelector('[aria-label="Open previous daily note"]'));
+    plugin.unload();
+  });
+  it('falls back to the date button when the corresponding arrow is now disabled', async () => {
+    const { plugin } = fixture(['Journal/2024-02-29.md', 'Journal/2026-09-16.md']);
+    document.querySelector<HTMLButtonElement>('[aria-label="Open previous daily note"]')!.click();
+    await dateIs('2024-02-29');
+    expect(document.querySelector<HTMLButtonElement>('[aria-label="Open previous daily note"]')?.disabled).toBe(true);
+    expect(document.activeElement).toBe(document.querySelector('.dnn-date'));
     plugin.unload();
   });
   it('navigates across gaps in the clicked pinned pane and preserves the other pane', async () => {
@@ -134,6 +172,19 @@ describe('settings and controller', () => {
       await vi.waitFor(() => expect(document.querySelector('.dnn-nav')).toBeNull());
       expect(frames).toHaveBeenCalledTimes(1);
     } finally { plugin.unload(); frames.mockRestore(); }
+  });
+  it('cancels a stale scheduled frame and reschedules when a window closes', async () => {
+    const { app, leaf, plugin } = fixture();
+    const raf = vi.spyOn(window, 'requestAnimationFrame');
+    app.vault.add('Journal/2026-09-15.md');
+    expect(raf).toHaveBeenCalledTimes(1);
+    app.workspace.trigger('window-close');
+    expect(raf).toHaveBeenCalledTimes(2);
+    await tick();
+    document.querySelector<HTMLButtonElement>('[aria-label="Open previous daily note"]')!.click();
+    await dateIs('2026-09-15');
+    expect(leaf.openFile.mock.calls[0]?.[0].path).toBe('Journal/2026-09-15.md');
+    plugin.unload();
   });
   it('does not navigate after the settings change', () => {
     const { app, leaf, plugin } = fixture();

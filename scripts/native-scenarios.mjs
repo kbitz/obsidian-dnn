@@ -1,28 +1,9 @@
 // Deliberate fixture mutations, restored before the Markdown hash comparison.
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { readdir, readFile, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
-import { homedir } from 'node:os';
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { cli, hashes, root, vault } from './native-helpers.mjs';
 
-const root = join(homedir(), 'scratch/obsidian-dnn');
-const vault = join(root, 'DNN Fixture');
-function cli(...args) {
-  const output = execFileSync('/usr/local/bin/obsidian', ['vault=DNN Fixture', ...args], { encoding: 'utf8', timeout: 30_000 }).trim();
-  if (/^Error:/m.test(output)) throw new Error(output);
-  return output;
-}
-async function hashes(dir = vault) {
-  const data = {};
-  for (const item of await readdir(dir, { withFileTypes: true })) {
-    if (item.name.startsWith('.')) continue;
-    const path = join(dir, item.name);
-    if (item.isDirectory()) Object.assign(data, await hashes(path));
-    else if (item.name.endsWith('.md')) data[path.slice(vault.length + 1)] = createHash('sha256').update(await readFile(path)).digest('hex');
-  }
-  return data;
-}
 assert.equal(cli('vault', 'info=path'), vault);
 const before = await hashes();
 const result = cli('eval', `code=(${async function (application) {

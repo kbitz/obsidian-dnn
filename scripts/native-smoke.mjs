@@ -1,19 +1,10 @@
 // Explicit fixture-only smoke test. The production plugin never imports this script.
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { readdir, readFile, mkdir, writeFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
-import { homedir } from 'node:os';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { cli, hashes, root, vault } from './native-helpers.mjs';
 
-const root = join(homedir(), 'scratch/obsidian-dnn');
-const vault = join(root, 'DNN Fixture');
 const results = [];
-function cli(...args) {
-  const output = execFileSync('/usr/local/bin/obsidian', ['vault=DNN Fixture', ...args], { encoding: 'utf8', timeout: 30_000 }).trim();
-  if (/^Error:/m.test(output)) throw new Error(output);
-  return output;
-}
 function evaluate(body) {
   const code = `(async()=>{if(app.vault.getName()!=='DNN Fixture')throw new Error('Wrong vault');const result=await(async()=>{${body}})();return JSON.stringify(result??null)})()`;
   return JSON.parse(cli('eval', `code=${code}`).replace(/^=> /, ''));
@@ -21,16 +12,6 @@ function evaluate(body) {
 function pause() { evaluate('await new Promise(r=>window.setTimeout(r,100));'); }
 function key(key, code, number, modifiers = 0) {
   for (const type of ['keyDown', 'keyUp']) cli('dev:cdp', 'method=Input.dispatchKeyEvent', `params=${JSON.stringify({ type, key, code, windowsVirtualKeyCode: number, modifiers })}`);
-}
-async function hashes(dir = vault) {
-  const data = {};
-  for (const item of await readdir(dir, { withFileTypes: true })) {
-    if (item.name.startsWith('.')) continue;
-    const path = join(dir, item.name);
-    if (item.isDirectory()) Object.assign(data, await hashes(path));
-    else if (item.name.endsWith('.md')) data[path.slice(vault.length + 1)] = createHash('sha256').update(await readFile(path)).digest('hex');
-  }
-  return data;
 }
 function check(name, action) { action(); results.push({ name, passed: true }); console.log(`PASS ${name}`); }
 const before = await hashes();
