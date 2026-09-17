@@ -1,0 +1,9 @@
+{
+  "id": "daily-note-navigation",
+  "name": "Daily Note Navigation",
+  "version": "0.1.0",
+  "minAppVersion": "1.13.7",
+  "description": "Browse existing daily notes from the note header with previous and next navigation and a date picker.",
+  "author": "kbitz",
+  "isDesktopOnly": true
+}
