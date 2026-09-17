@@ -10,15 +10,16 @@ The arrows skip gaps. Click the date to choose an existing note from a calendar,
 
 ## Requirements
 
-- Desktop Obsidian 1.13.7 or later. Currently tested on macOS; Windows and Linux are not yet verified.
+- Desktop Obsidian 1.13.7 or later (`isDesktopOnly`). Currently tested on macOS; Windows and Linux are not yet verified.
+- Plugin ID and folder name: `daily-note-navigation`.
 - Enable the core **Daily notes** plugin and configure its folder and date format. No separate folder setting is needed.
 - Use a format that identifies a complete date with a four-digit year. Calendar dates (`YYYY-MM-DD`), ordinal dates (`YYYY-DDD`), ISO week dates (`GGGG-[W]WW-E`), date subfolders, bracketed literals, and localized date formats without a time are supported. Displayed dates always use ASCII `YYYY-MM-DD`.
 
-The header follows Obsidian's note-header visibility setting. Unsupported formats, unavailable core settings, or incompatible header markup leave the ordinary header available.
+The header follows Obsidian's note-header visibility setting. Unsupported formats, unavailable core settings, or incompatible header markup leave the ordinary header available. If more than one file maps to the same day, that day is skipped for navigation and the ordinary breadcrumb stays.
 
 ## Using the navigator
 
-Open a daily note, then use either arrow or click its date. Choose a month and enter a four-digit year; commit the year with Enter or by leaving the field. Only years represented in your notes are available. Today opens today's note only if it already exists. Escape, Close, or clicking outside dismisses the picker.
+Open a daily note, then use either arrow or click its date. The previous/next arrows skip missing days and disable at the earliest and latest existing notes. Choose a month and enter a four-digit year; commit the year with Enter or by leaving the field. Only years represented in your notes are available. Today opens today's note only if it already exists. Escape, Close, or clicking outside dismisses the picker.
 
 Keyboard: arrow keys move through the grid, Home/End reach week boundaries, Page Up/Down change month, and Shift+Page Up/Down change year. Enter or Space selects an existing date. Tab stays inside the picker. Missing dates can receive focus and announce their unavailable state.
 
