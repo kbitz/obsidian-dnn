@@ -190,6 +190,13 @@ describe('calendar behavior', () => {
     second.picker.close();
     expect(remove).toHaveBeenCalledWith('resize', expect.any(Function));
   });
+  it('coalesces repeated resize events into one reposition per frame', () => {
+    calendar();
+    const frames = vi.spyOn(window, 'requestAnimationFrame');
+    for (let i = 0; i < 5; i++) window.dispatchEvent(new Event('resize'));
+    expect(frames).toHaveBeenCalledTimes(1);
+    frames.mockRestore();
+  });
   it('refreshes Today at midnight and cancels the timer on close', async () => {
     vi.useFakeTimers(); vi.setSystemTime(new Date('2026-09-15T23:59:59'));
     const scheduled = vi.spyOn(window, 'setTimeout');
