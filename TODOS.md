@@ -1,6 +1,6 @@
 # TODOS
 
-## Infrastructure
+## Completed
 
 ### Release/distribution pipeline for the Obsidian plugin
 
@@ -8,10 +8,8 @@
 
 **Why:** There's currently no way for anyone to install this plugin from a release — the daily-note-navigation PR is the first to add the actual buildable artifact (package.json, esbuild config, manifest.json).
 
-**Context:** No `.github/workflows/` directory exists yet. Building the workflow is separate from deciding *whether/how* to publish — CLAUDE.md reserves the distribution-license decision for the user before publication; this item is just the build/release automation, not that decision.
+**Context:** Shipped as `.github/workflows/release.yml` (PR #2), alongside an MIT license (matching `obsidian-crypt`) so BRAT can track this repo's releases for auto-update. The repo is now public.
 
 **Effort:** S
 **Priority:** P2
-**Depends on:** Distribution license decision (see CLAUDE.md)
-
-## Completed
+**Completed:** v0.1.0 (2026-09-18)
