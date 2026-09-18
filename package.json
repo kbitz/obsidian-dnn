@@ -14,7 +14,7 @@
     "fixture": "node scripts/fixture.mjs",
     "install:local": "node scripts/install-local.mjs"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "engines": { "node": ">=22.12.0" },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
