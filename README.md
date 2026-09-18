@@ -83,6 +83,12 @@ The plugin runs offline. It indexes file paths under the configured Daily notes 
 
 Reading core Daily notes settings and replacing the header use undocumented integration points. Both are isolated and guarded; future Obsidian changes may require an update. Plugin styles are scoped and use the active theme's variables.
 
+## License
+
+[MIT](LICENSE)
+
 ## Distribution
 
-This is currently a private, unlicensed project (`UNLICENSED`), not a community-directory submission. Choose a license and complete the [publication checklist](docs/plans/obsidian-plugin-guidelines.md) before public distribution. Release versions and tags must match `VERSION` as plain `x.y.z`, without a `v` prefix. Keep `package.json`, `manifest.json`, the lockfile, and `versions.json` consistent when releasing; generated bundles belong in release assets, not git.
+Installable via [BRAT](https://github.com/TfTHacker/obsidian42-brat): in Obsidian, add `kbitz/obsidian-dnn` as a beta plugin. The repo is public, so no token is needed. BRAT then keeps the plugin updated automatically from this repo's [releases](https://github.com/kbitz/obsidian-dnn/releases), which a tag push builds and publishes via `.github/workflows/release.yml`.
+
+Not (yet) submitted to Obsidian's community plugin directory — that's a separate decision; see the [publication checklist](docs/plans/obsidian-plugin-guidelines.md) if that changes. Release versions and tags must match `VERSION` as plain `x.y.z`, without a `v` prefix. Keep `package.json`, `manifest.json`, the lockfile, and `versions.json` consistent when releasing; generated bundles belong in release assets, not git.
