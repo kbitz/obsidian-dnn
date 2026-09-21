@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.1] - 2026-09-21
+
+### Fixed
+
+- Correct the minimum Obsidian version from 1.13.7 to 1.9.0 so compatible 1.9.x installations can load the plugin and install it through BRAT.
+- Correct the 0.1.0 compatibility entry in `versions.json` to 1.9.0.
+
 ## [0.1.0] - 2026-09-17
 
 ### Added

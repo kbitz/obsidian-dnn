@@ -10,7 +10,7 @@ The arrows skip gaps. Click the date to choose an existing note from a calendar,
 
 ## Requirements
 
-- Desktop Obsidian 1.13.7 or later (`isDesktopOnly`). Currently tested on macOS; Windows and Linux are not yet verified.
+- Desktop Obsidian 1.9.0 or later (`isDesktopOnly`). Currently tested on macOS; Windows and Linux are not yet verified.
 - Plugin ID and folder name: `daily-note-navigation`.
 - Enable the core **Daily notes** plugin and configure its folder and date format. No separate folder setting is needed.
 - Use a format that identifies a complete date with a four-digit year. Calendar dates (`YYYY-MM-DD`), ordinal dates (`YYYY-DDD`), ISO week dates (`GGGG-[W]WW-E`), date subfolders, bracketed literals, and localized date formats without a time are supported. Displayed dates always use ASCII `YYYY-MM-DD`.
